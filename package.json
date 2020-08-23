@@ -1,0 +1,63 @@
+{
+  "name": "memo-fetch",
+  "version": "0.0.1",
+  "description": "A platform agnostic caching api fetching state management solution",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "module": "./esm/index.js",
+  "files": [
+    "dist/**",
+    "esm/**"
+  ],
+  "scripts": {
+    "test": "jest",
+    "build": "npm run build:esm && npm run build:cjs",
+    "build:cjs": "ncc build src/index.ts -o dist -m",
+    "build:esm": "tsc --module ES6 --outDir esm",
+    "watch": "tsc --watch",
+    "types:check": "tsc --noEmit",
+    "format": "prettier --write \"{src,test,examples}/**/*.{ts,tsx}\"",
+    "lint": "eslint \"{src,test,examples}/**/*.{ts,tsx}\"",
+    "lint:fix": "eslint \"{src,test,examples}/**/*.{ts,tsx}\" --fix"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run types:check && lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "npm run lint:fix",
+      "npm run format",
+      "git add"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danyo1399/memo-fetch.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/danyo1399/memo-fetch/issues"
+  },
+  "dependencies": {
+    "fast-deep-equal": "2.0.1"
+  },
+  "homepage": "https://github.com/danyo1399/memo-fetch#readme",
+  "devDependencies": {
+    "@types/jest": "^26.0.10",
+    "@types/node": "11.12.0",
+    "@typescript-eslint/eslint-plugin": "2.5.0",
+    "@typescript-eslint/parser": "2.5.0",
+    "@vercel/ncc": "^0.23.0",
+    "eslint": "6.6.0",
+    "eslint-config-prettier": "6.5.0",
+    "husky": "2.4.1",
+    "jest": "^26.4.2",
+    "lint-staged": "8.2.1",
+    "prettier": "1.18.2",
+    "ts-jest": "^26.2.0",
+    "typescript": "3.6.4"
+  }
+}
