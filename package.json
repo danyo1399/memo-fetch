@@ -15,10 +15,7 @@
   ],
   "scripts": {
     "test": "jest",
-    "buildold": "npm run clear && npm run build:esm && npm run build:cjs",
     "build": "rimraf dist && tsdx build --name memo-fetch --format esm,cjs,umd ",
-    "build:cjs": "ncc build src/index.ts -o dist -m",
-    "build:esm": "tsc --module ES6 --outDir esm",
     "clear": "rimraf dist && rimraf esm",
     "release": " npm run build && standard-version && git push --follow-tags origin master && npm publish --access public",
     "watch": "tsc --watch",
@@ -49,7 +46,8 @@
     "url": "https://github.com/danyo1399/memo-fetch/issues"
   },
   "dependencies": {
-    "fast-deep-equal": "^3.1.3"
+    "fast-deep-equal": "^3.1.3",
+    "rollup-plugin-terser": "latest"
   },
   "homepage": "https://github.com/danyo1399/memo-fetch#readme",
   "devDependencies": {
