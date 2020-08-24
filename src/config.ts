@@ -46,6 +46,12 @@ const slowConnection =
   navigator['connection'] &&
   ['slow-2g', '2g'].indexOf(navigator['connection'].effectiveType) !== -1
 
+// by default use fetch
+async function fetcher(arg: any, ...args: any) {
+  const res = await fetch(arg, ...args)
+  return res.json()
+}
+
 // config
 const defaultConfig: ConfigInterface = {
   // events
@@ -53,12 +59,11 @@ const defaultConfig: ConfigInterface = {
   onSuccess: () => {},
   onError: () => {},
   onErrorRetry,
-
+  fetcher,
   errorRetryInterval: (slowConnection ? 10 : 5) * 1000,
   focusThrottleInterval: 5 * 1000,
   dedupingInterval: 2 * 1000,
   loadingTimeout: (slowConnection ? 5 : 3) * 1000,
-
   refreshInterval: 0,
   revalidateOnFocus: true,
   revalidateOnReconnect: true,

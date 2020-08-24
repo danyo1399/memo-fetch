@@ -15,7 +15,7 @@
     "build:cjs": "ncc build src/index.ts -o dist -m",
     "build:esm": "tsc --module ES6 --outDir esm",
     "clear": "rimraf dist && rimraf esm",
-    "release": " npm run build && standard-version",
+    "release": " npm run build && standard-version && npm publish",
     "watch": "tsc --watch",
     "types:check": "tsc --noEmit",
     "publish": "git push --follow-tags origin master && npm publish --access public",

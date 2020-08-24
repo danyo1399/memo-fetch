@@ -600,10 +600,15 @@ function useSWR<Data = any, Error = any>(
       mutate: boundMutate,
       dispose
     } as responseInterface<Data, Error>
-    return addComputedStateProperties(tempState)
+    return addComputedStateProperties(
+      tempState,
+      stateRef.error,
+      stateRef.data,
+      stateRef.isValidating
+    )
   }
 
-  function addComputedStateProperties(state: any) {
+  function addComputedStateProperties(state: any, error, data, isValidating) {
     Object.defineProperties(state, {
       error: {
         // `key` might be changed in the upcoming hook re-render,
@@ -611,21 +616,21 @@ function useSWR<Data = any, Error = any>(
         // so we need to match the latest key and data (fallback to `initialData`)
         get: function() {
           stateDependencies.error = true
-          return keyRef === key ? stateRef.error : initialError
+          return error
         },
         enumerable: true
       },
       data: {
         get: function() {
           stateDependencies.data = true
-          return keyRef === key ? stateRef.data : initialData
+          return data
         },
         enumerable: true
       },
       isValidating: {
         get: function() {
           stateDependencies.isValidating = true
-          return stateRef.isValidating
+          return isValidating
         },
         enumerable: true
       }
