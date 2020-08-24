@@ -1,6 +1,6 @@
 {
   "name": "@danyo1399/memo-fetch",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A platform agnostic caching api fetching state management solution",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,7 +15,7 @@
     "build:cjs": "ncc build src/index.ts -o dist -m",
     "build:esm": "tsc --module ES6 --outDir esm",
     "clear": "rimraf dist && rimraf esm",
-    "release": "standard-version",
+    "release": " npm run build && standard-version",
     "watch": "tsc --watch",
     "types:check": "tsc --noEmit",
     "publish": "npm publish --access public",
