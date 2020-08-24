@@ -1,5 +1,5 @@
 {
-  "name": "memo-fetch",
+  "name": "@danyo1399/memo-fetch",
   "version": "0.0.1",
   "description": "A platform agnostic caching api fetching state management solution",
   "main": "./dist/index.js",
@@ -16,6 +16,7 @@
     "build:esm": "tsc --module ES6 --outDir esm",
     "watch": "tsc --watch",
     "types:check": "tsc --noEmit",
+    "publish": "npm publish --access public",
     "format": "prettier --write \"{src,test,examples}/**/*.{ts,tsx}\"",
     "lint": "eslint \"{src,test,examples}/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"{src,test,examples}/**/*.{ts,tsx}\" --fix"
