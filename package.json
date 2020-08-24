@@ -1,24 +1,28 @@
 {
   "name": "@danyo1399/memo-fetch",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "A platform agnostic caching api fetching state management solution",
-  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "module": "./esm/index.js",
+  "main": "dist/index.js",
+  "module": "dist/memo-fetch.esm.js",
+  "umd:main": "dist/memo-fetch.umd.production.min.js",
+  "unpkg": "dist/memo-fetch.umd.production.min.js",
+  "jsdelivr": "dist/memo-fetch.umd.production.min.js",
+  "jsnext:main": "dist/memo-fetch.esm.js",
+  "react-native": "dist/memo-fetch.esm.js",
   "files": [
-    "dist/**",
-    "esm/**"
+    "dist/**"
   ],
   "scripts": {
     "test": "jest",
-    "build": "npm run clear && npm run build:esm && npm run build:cjs",
+    "buildold": "npm run clear && npm run build:esm && npm run build:cjs",
+    "build": "rimraf dist && tsdx build --name memo-fetch --format esm,cjs,umd ",
     "build:cjs": "ncc build src/index.ts -o dist -m",
     "build:esm": "tsc --module ES6 --outDir esm",
     "clear": "rimraf dist && rimraf esm",
-    "release": " npm run build && standard-version && npm run publish",
+    "release": " npm run build && standard-version && git push --follow-tags origin master && npm publish --access public",
     "watch": "tsc --watch",
     "types:check": "tsc --noEmit",
-    "publish": "git push --follow-tags origin master && npm publish --access public",
     "format": "prettier --write \"{src,test,examples}/**/*.{ts,tsx}\"",
     "lint": "eslint \"{src,test,examples}/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"{src,test,examples}/**/*.{ts,tsx}\" --fix"
@@ -64,6 +68,7 @@
     "rimraf": "^3.0.2",
     "standard-version": "^9.0.0",
     "ts-jest": "^26.2.0",
+    "tsdx": "^0.13.3",
     "typescript": "3.6.4"
   }
 }
