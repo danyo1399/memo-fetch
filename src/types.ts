@@ -21,6 +21,7 @@ export interface ConfigInterface<
   initialData?: Data
 
   onLoadingSlow?: (key: string, config: ConfigInterface<Data, Error>) => void
+  onStateChanged?: (response: responseInterface<Data, Error>) => void
   onSuccess?: (
     data: Data,
     key: string,
@@ -76,13 +77,13 @@ export type broadcastStateInterface<Data = any, Error = any> = (
 export type responseInterface<Data, Error> = {
   data?: Data
   error?: Error
+  isValidating: boolean
   dispose: () => void
   revalidate: () => Promise<boolean>
   mutate: (
     data?: Data | Promise<Data> | mutateCallback<Data>,
     shouldRevalidate?: boolean
   ) => Promise<Data | undefined>
-  isValidating: boolean
 }
 export type revalidateType = (
   revalidateOpts: RevalidateOptionInterface

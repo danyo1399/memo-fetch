@@ -238,6 +238,10 @@ function useSWR<Data = any, Error = any>(
         shouldUpdateState = true
       }
     }
+    if (config.onStateChanged) {
+      const newState = createResponseInterface()
+      config.onStateChanged(newState)
+    }
     if (shouldUpdateState || config.suspense) {
       if (unmountedRef) return
       rerender({})
@@ -588,39 +592,46 @@ function useSWR<Data = any, Error = any>(
 
   init()
 
-  const state = {
-    revalidate,
-    mutate: boundMutate,
-    dispose
-  } as responseInterface<Data, Error>
-  Object.defineProperties(state, {
-    error: {
-      // `key` might be changed in the upcoming hook re-render,
-      // but the previous state will stay
-      // so we need to match the latest key and data (fallback to `initialData`)
-      get: function() {
-        stateDependencies.error = true
-        return keyRef === key ? stateRef.error : initialError
-      },
-      enumerable: true
-    },
-    data: {
-      get: function() {
-        stateDependencies.data = true
-        return keyRef === key ? stateRef.data : initialData
-      },
-      enumerable: true
-    },
-    isValidating: {
-      get: function() {
-        stateDependencies.isValidating = true
-        return stateRef.isValidating
-      },
-      enumerable: true
-    }
-  })
+  return createResponseInterface()
 
-  return state
+  function createResponseInterface(): responseInterface<Data, Error> {
+    const tempState = {
+      revalidate,
+      mutate: boundMutate,
+      dispose
+    } as responseInterface<Data, Error>
+    return addComputedStateProperties(tempState)
+  }
+
+  function addComputedStateProperties(state: any) {
+    Object.defineProperties(state, {
+      error: {
+        // `key` might be changed in the upcoming hook re-render,
+        // but the previous state will stay
+        // so we need to match the latest key and data (fallback to `initialData`)
+        get: function() {
+          stateDependencies.error = true
+          return keyRef === key ? stateRef.error : initialError
+        },
+        enumerable: true
+      },
+      data: {
+        get: function() {
+          stateDependencies.data = true
+          return keyRef === key ? stateRef.data : initialData
+        },
+        enumerable: true
+      },
+      isValidating: {
+        get: function() {
+          stateDependencies.isValidating = true
+          return stateRef.isValidating
+        },
+        enumerable: true
+      }
+    })
+    return state
+  }
 }
 
 export { trigger, mutate }
