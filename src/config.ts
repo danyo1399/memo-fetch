@@ -1,4 +1,3 @@
-import deepEqual from 'fast-deep-equal'
 import isDocumentVisible from './libs/is-document-visible'
 import {
   ConfigInterface,
@@ -6,6 +5,7 @@ import {
   revalidateType
 } from './types'
 import Cache from './cache'
+import deepEqual from './libs/deep-equals'
 
 // cache
 const cache = new Cache()
