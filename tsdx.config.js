@@ -6,7 +6,6 @@ module.exports = {
         if (options.format === "esm" || options.env === "production") {
             config.plugins.push(
                 terser({
-                    sourcemap: true,
                     module: true,
                     compress: {
                         hoist_funs: true,
