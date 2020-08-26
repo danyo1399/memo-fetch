@@ -1,7 +1,7 @@
 export * from './mfetch'
 import { default as mfetch } from './mfetch'
 
-export { cache } from './config'
+export { cache, setGlobalConfig } from './config'
 export {
   ConfigInterface,
   revalidateType,
