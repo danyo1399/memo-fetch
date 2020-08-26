@@ -22,13 +22,27 @@ const rIC = IS_SERVER
   : window['requestIdleCallback'] || (f => setTimeout(f, 1))
 
 // global state managers
-const CONCURRENT_PROMISES = {}
-const CONCURRENT_PROMISES_TS = {}
-const FOCUS_REVALIDATORS = {}
-const RECONNECT_REVALIDATORS = {}
-const CACHE_REVALIDATORS = {}
-const MUTATION_TS = {}
-const MUTATION_END_TS = {}
+let CONCURRENT_PROMISES = {}
+let CONCURRENT_PROMISES_TS = {}
+let FOCUS_REVALIDATORS = {}
+let RECONNECT_REVALIDATORS = {}
+let CACHE_REVALIDATORS = {}
+let MUTATION_TS = {}
+let MUTATION_END_TS = {}
+
+/**
+ * Use for testing
+ */
+function reset() {
+  CONCURRENT_PROMISES = {}
+  CONCURRENT_PROMISES_TS = {}
+  FOCUS_REVALIDATORS = {}
+  RECONNECT_REVALIDATORS = {}
+  CACHE_REVALIDATORS = {}
+  MUTATION_TS = {}
+  MUTATION_END_TS = {}
+  cache.clear()
+}
 
 // setup DOM events listeners for `focus` and `reconnect` actions
 if (!IS_SERVER && window.addEventListener) {
@@ -145,7 +159,7 @@ const mutate: mutateInterface = async (
   MUTATION_END_TS[key] = Date.now() - 1
 
   // enter the revalidation stage
-  // update existing SWR Hooks' state
+  // update existing mfetch Hooks' state
   const updaters = CACHE_REVALIDATORS[key]
   if (updaters) {
     const promises = []
@@ -163,38 +177,14 @@ const mutate: mutateInterface = async (
   return data
 }
 
-function useSWR<Data = any, Error = any>(
-  key: keyInterface
-): responseInterface<Data, Error>
-function useSWR<Data = any, Error = any>(
-  key: keyInterface,
-  config?: ConfigInterface<Data, Error>
-): responseInterface<Data, Error>
-function useSWR<Data = any, Error = any>(
-  key: keyInterface,
-  fn?: fetcherFn<Data>,
-  config?: ConfigInterface<Data, Error>
-): responseInterface<Data, Error>
-function useSWR<Data = any, Error = any>(
-  ...args
+function mfetch<Data = any, Error = any>(
+  _key: keyInterface,
+  onStateChanged?: (response: responseInterface<Data, Error>) => void,
+  {
+    fn,
+    config
+  }: { fn?: fetcherFn<Data>; config?: ConfigInterface<Data, Error> } = {}
 ): responseInterface<Data, Error> {
-  let _key: keyInterface,
-    fn: fetcherFn<Data> | undefined,
-    config: ConfigInterface<Data, Error> = {}
-  if (args.length >= 1) {
-    _key = args[0]
-  }
-  if (args.length > 2) {
-    fn = args[1]
-    config = args[2]
-  } else {
-    if (typeof args[1] === 'function') {
-      fn = args[1]
-    } else if (typeof args[1] === 'object') {
-      config = args[1]
-    }
-  }
-
   // we assume `key` as the identifier of the request
   // `key` can change but `fn` shouldn't
   // (because `revalidate` only depends on `key`)
@@ -209,6 +199,8 @@ function useSWR<Data = any, Error = any>(
     // use the global fetcher
     fn = config.fetcher
   }
+
+  console.log('lol fn', fn)
 
   const initialData = cache.get(key) || config.initialData
   const initialError = cache.get(keyErr)
@@ -238,9 +230,9 @@ function useSWR<Data = any, Error = any>(
         shouldUpdateState = true
       }
     }
-    if (config.onStateChanged) {
+    if (onStateChanged) {
       const newState = createResponseInterface()
-      config.onStateChanged(newState)
+      onStateChanged(newState)
     }
     if (shouldUpdateState || config.suspense) {
       if (unmountedRef) return
@@ -592,7 +584,7 @@ function useSWR<Data = any, Error = any>(
 
   init()
 
-  return createResponseInterface()
+  return createImpureResponseInterface()
 
   function createResponseInterface(): responseInterface<Data, Error> {
     const tempState = {
@@ -606,6 +598,15 @@ function useSWR<Data = any, Error = any>(
       stateRef.data,
       stateRef.isValidating
     )
+  }
+
+  function createImpureResponseInterface(): responseInterface<Data, Error> {
+    const tempState = {
+      revalidate,
+      mutate: boundMutate,
+      dispose
+    } as responseInterface<Data, Error>
+    return addImpureComputedStateProperties(tempState)
   }
 
   function addComputedStateProperties(state: any, error, data, isValidating) {
@@ -637,7 +638,37 @@ function useSWR<Data = any, Error = any>(
     })
     return state
   }
+
+  function addImpureComputedStateProperties(state: any) {
+    Object.defineProperties(state, {
+      error: {
+        // `key` might be changed in the upcoming hook re-render,
+        // but the previous state will stay
+        // so we need to match the latest key and data (fallback to `initialData`)
+        get: function() {
+          stateDependencies.error = true
+          return stateRef.error
+        },
+        enumerable: true
+      },
+      data: {
+        get: function() {
+          stateDependencies.data = true
+          return stateRef.data
+        },
+        enumerable: true
+      },
+      isValidating: {
+        get: function() {
+          stateDependencies.isValidating = true
+          return stateRef.isValidating
+        },
+        enumerable: true
+      }
+    })
+    return state
+  }
 }
 
-export { trigger, mutate }
-export default useSWR
+export { trigger, mutate, reset }
+export default mfetch

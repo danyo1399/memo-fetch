@@ -1,5 +1,5 @@
-export * from './use-swr'
-import { default as useSWR } from './use-swr'
+export * from './mfetch'
+import { default as mfetch } from './mfetch'
 
 export { cache } from './config'
 export {
@@ -10,4 +10,4 @@ export {
   responseInterface,
   CacheInterface
 } from './types'
-export default useSWR
+export default mfetch
