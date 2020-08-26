@@ -11,6 +11,22 @@ describe('mfetch tests', () => {
     reset()
   })
 
+  it('dispose unsubscribes mfetch', async () => {
+    const fn = jest.fn(() => {
+      return Promise.resolve('boo')
+    })
+    const state = mfetch('https://aws.random.cat/meow', null, {
+      fn
+    })
+
+    await sleep(10)
+    state.dispose()
+
+    const result = await state.mutate()
+
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(result).toEqual('boo')
+  })
   it('impure state object always contains current state', async () => {
     const fn = jest.fn(() => {
       return Promise.resolve('boo')

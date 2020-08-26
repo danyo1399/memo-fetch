@@ -200,8 +200,6 @@ function mfetch<Data = any, Error = any>(
     fn = config.fetcher
   }
 
-  console.log('lol fn', fn)
-
   const initialData = cache.get(key) || config.initialData
   const initialError = cache.get(keyErr)
 
