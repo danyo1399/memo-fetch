@@ -1,11 +1,10 @@
-import defaultConfig, { cache, globalConfig } from './config'
+import defaultConfig, { cache, globalConfig, setGlobalConfig } from './config'
 import isDocumentVisible from './libs/is-document-visible'
 import isOnline from './libs/is-online'
 import {
   actionType,
   broadcastStateInterface,
   ConfigInterface,
-  fetcherFn,
   keyInterface,
   mutateInterface,
   responseInterface,
@@ -17,9 +16,13 @@ import {
 const IS_SERVER = typeof window === 'undefined'
 
 // polyfill for requestIdleCallback
-const rIC = IS_SERVER
-  ? null
-  : window['requestIdleCallback'] || (f => setTimeout(f, 1))
+// danyo not sure if i need this
+// it causes issues with fetchone because of the delayed async revalidate call. Disable for now
+// const rIC = IS_SERVER
+//   ? null
+//   : window['requestIdleCallback'] || (f => setTimeout(f, 1))
+
+const rIC = f => f()
 
 // global state managers
 let CONCURRENT_PROMISES = {}
@@ -41,6 +44,7 @@ function reset() {
   CACHE_REVALIDATORS = {}
   MUTATION_TS = {}
   MUTATION_END_TS = {}
+  setGlobalConfig(undefined)
   cache.clear()
 }
 
@@ -180,10 +184,7 @@ const mutate: mutateInterface = async (
 function mfetch<Data = any, Error = any>(
   _key: keyInterface,
   onStateChanged?: (response: responseInterface<Data, Error>) => void,
-  {
-    fn,
-    config
-  }: { fn?: fetcherFn<Data>; config?: ConfigInterface<Data, Error> } = {}
+  config: ConfigInterface<Data, Error> = {}
 ): responseInterface<Data, Error> {
   // we assume `key` as the identifier of the request
   // `key` can change but `fn` shouldn't
@@ -195,10 +196,7 @@ function mfetch<Data = any, Error = any>(
 
   const configRef = config
 
-  if (typeof fn === 'undefined') {
-    // use the global fetcher
-    fn = config.fetcher
-  }
+  const fn = config.fetcher
 
   const initialData = cache.get(key) || config.initialData
   const initialError = cache.get(keyErr)
@@ -220,6 +218,14 @@ function mfetch<Data = any, Error = any>(
   // const rerender = useState(null)[1]
   const rerender = (_: any) => null
 
+  let stateChangeEmitted = false
+  const emitStateChange = () => {
+    if (onStateChanged) {
+      stateChangeEmitted = true
+      const newState = createResponseInterface()
+      onStateChanged(newState)
+    }
+  }
   let dispatch = payload => {
     let shouldUpdateState = false
     for (let k in payload) {
@@ -228,10 +234,7 @@ function mfetch<Data = any, Error = any>(
         shouldUpdateState = true
       }
     }
-    if (onStateChanged) {
-      const newState = createResponseInterface()
-      onStateChanged(newState)
-    }
+    emitStateChange()
     if (shouldUpdateState || config.suspense) {
       if (unmountedRef) return
       rerender({})
@@ -582,6 +585,9 @@ function mfetch<Data = any, Error = any>(
 
   init()
 
+  if (!stateChangeEmitted) {
+    emitStateChange()
+  }
   return createImpureResponseInterface()
 
   function createResponseInterface(): responseInterface<Data, Error> {
@@ -668,5 +674,28 @@ function mfetch<Data = any, Error = any>(
   }
 }
 
-export { trigger, mutate, reset }
+async function mFetchOne<Data = any>(
+  key: keyInterface,
+  config: ConfigInterface<Data, Error> = {}
+): Promise<Data> {
+  return new Promise((resolve, reject) => {
+    mfetch(
+      key,
+      response => {
+        if (response.isValidating) {
+          return
+        }
+
+        response.dispose()
+        if (response.error) {
+          return reject(response.error)
+        }
+
+        return resolve(response.data)
+      },
+      config
+    )
+  })
+}
+export { trigger, mutate, reset, mFetchOne }
 export default mfetch
