@@ -1,6 +1,6 @@
 {
   "name": "@danyo1399/memo-fetch",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "A platform agnostic caching api fetching state management solution",
   "types": "./dist/index.d.ts",
   "main": "dist/index.js",
