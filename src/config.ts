@@ -70,6 +70,7 @@ const defaultConfig: ConfigInterface = {
   refreshWhenHidden: false,
   refreshWhenOffline: false,
   shouldRetryOnError: true,
+  dedupOnInit: true,
   suspense: false,
   compare: deepEqual
 }

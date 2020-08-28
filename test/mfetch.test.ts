@@ -1,5 +1,5 @@
 import mfetch, { mFetchOne, reset } from '../src/mfetch'
-import { cache, setGlobalConfig } from '../src'
+import { setGlobalConfig } from '../src'
 
 async function sleep(ms: number) {
   return new Promise(resolve => {
@@ -7,6 +7,9 @@ async function sleep(ms: number) {
   })
 }
 
+function createStaticFetcher(value: any) {
+  return jest.fn(() => Promise.resolve(value))
+}
 function createFetcher() {
   let calls: any = []
   const fn: any = jest.fn(() => {
@@ -37,102 +40,42 @@ describe('mfetch tests', () => {
 
   describe('[mFetchOne]', function() {
     it('fetch one success with no cache should return api result', async function() {
-      const fetcher = createFetcher()
+      const fetcher = createStaticFetcher('api result')
       setGlobalConfig({ fetcher })
-      const prom: any = mFetchOne('key', { fetcher })
-
-      fetcher.resolve('api result')
+      const prom: any = mFetchOne('key', fetcher)
 
       const result = await prom
       expect(fetcher).toHaveBeenCalledTimes(1)
       expect(result).toEqual('api result')
     })
 
-    it('fetch one success with cached enabled and cache hit should return cached value', async function() {
-      let fetcher = jest.fn(() => Promise.resolve('cached api response'))
-      await mFetchOne('key', { fetcher })
-      await sleep(10)
+    it('fetch one with cached value should return api result', async function() {
+      await mFetchOne('key', createStaticFetcher('cache result'))
 
-      fetcher = jest.fn(() => Promise.resolve('api response'))
-      const result = await mFetchOne('key', { fetcher })
-
-      await sleep(10)
-
-      expect(fetcher).toHaveBeenCalledTimes(0)
-      expect(result).toEqual('cached api response')
-    })
-
-    it('fetch one success with cached enabled and cache miss due to timeout should return api call value', async function() {
-      let fetcher = jest.fn(() => Promise.resolve('cached api response'))
-      await mFetchOne('key', { fetcher, dedupingInterval: 400 })
-      await sleep(800)
-
-      fetcher = jest.fn(() => Promise.resolve('api response'))
-      const result = await mFetchOne('key', { fetcher })
-
-      await sleep(10)
+      const fetcher = createStaticFetcher('api result')
+      const result = await mFetchOne('key', fetcher)
 
       expect(fetcher).toHaveBeenCalledTimes(1)
-      expect(result).toEqual('api response')
+      expect(result).toEqual('api result')
     })
 
-    it('fetch one success with cached enabled and cache miss should return api response', async function() {
-      const fn = createFetcher()
-      setGlobalConfig({ fetcher: fn })
-      const prom = mFetchOne('key')
-
-      await sleep(10)
-      fn.resolve('api response')
-
-      const result = await prom
-      expect(fn).toHaveBeenCalledTimes(1)
-      expect(result).toEqual('api response')
-    })
-
-    it('fetch one success with deduping on, should dedupe api requests', async function() {
-      let apiResponse = 'api response 1'
-      let fetcher = jest.fn(() => Promise.resolve(apiResponse))
-      const result1 = await mFetchOne('key', { fetcher })
-
-      await sleep(10)
-      apiResponse = 'api response 2'
-
-      const result2 = await mFetchOne('key', { fetcher })
-
-      await sleep(10)
-
-      expect(fetcher).toHaveBeenCalledTimes(1)
-      expect(result1).toEqual('api response 1')
-      expect(result2).toEqual('api response 1')
-    })
-
-    it('fetch one success with deduping off, should not dedup api requests', async function() {
-      let apiResponse = 'api response 1'
-      const fetcher = jest.fn(() => Promise.resolve(apiResponse))
-      const result1 = await mFetchOne('key', {
-        fetcher,
-        dedupingInterval: undefined
-      })
-
-      await sleep(10)
-      apiResponse = 'api response 2'
-
-      const result2 = await mFetchOne('key', {
-        fetcher,
-        dedupingInterval: undefined
-      })
-
-      await sleep(10)
-
-      expect(fetcher).toHaveBeenCalledTimes(2)
-      expect(result1).toEqual('api response 1')
-      expect(result2).toEqual('api response 2')
-    })
-
-    it('fetch one api failure with cache disabled should throw error', function(done) {
-      const fetcher = createFetcher()
+    it('fetch one api failure should throw error', function(done) {
+      const fetcher = jest.fn(() => Promise.reject('boom'))
       setGlobalConfig({ fetcher })
-      const prom: any = mFetchOne('http://test', { fetcher })
+      const prom: any = mFetchOne('http://test')
+      prom
+        .then(() => fail())
+        .catch(err => {
+          expect(err).toEqual('boom')
+          done()
+        })
+    })
+
+    it('fetch one failure with cache hit should throw error', async function(done) {
+      await mFetchOne('http://test', createStaticFetcher('cached value'))
+      const fetcher = createFetcher()
+
+      const prom: any = mFetchOne('http://test', fetcher)
 
       fetcher.reject('boom')
 
@@ -143,37 +86,74 @@ describe('mfetch tests', () => {
           done()
         })
     })
-
-    it('fetch one api failure with cache enabled and cache miss should throw error', function(done) {
-      const fetcher = createFetcher()
-      setGlobalConfig({ fetcher })
-      const prom: any = mFetchOne('http://test', { fetcher })
-
-      fetcher.reject('boom')
-
-      prom
-        .then(() => fail())
-        .catch(err => {
-          expect(err).toEqual('boom')
-          done()
-        })
+  })
+  it('when dedup on init is false then revalidate on init does not dedup api calls', async function() {
+    let state = mfetch('key', null, {
+      dedupOnInit: false,
+      fetcher: createStaticFetcher('cached value')
     })
 
-    it('fetch one failure with cache enabled and cache value', function(done) {
-      cache.set('key', 'cached')
-      const fetcher = createFetcher()
-      setGlobalConfig({ fetcher })
-      const prom: any = mFetchOne('http://test', { fetcher })
+    await sleep(10)
+    state.dispose()
+    let results: any[] = []
+    const fetcher = createStaticFetcher('api call value value')
+    state = mfetch(
+      'key',
+      ({ data, isValidating, error }) =>
+        results.push({ data, isValidating, error }),
+      { dedupOnInit: false, fetcher }
+    )
 
-      fetcher.reject('boom')
+    await sleep(10)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(results).toMatchInlineSnapshot(`
+      Array [
+        Object {
+          "data": "cached value",
+          "error": undefined,
+          "isValidating": true,
+        },
+        Object {
+          "data": "api call value value",
+          "error": undefined,
+          "isValidating": false,
+        },
+      ]
+    `)
+  })
 
-      prom
-        .then(() => fail())
-        .catch(err => {
-          expect(err).toEqual('boom')
-          done()
-        })
+  it('when dedup on init is true then revalidate on init does dedup api calls', async function() {
+    let state = mfetch('key', null, {
+      fetcher: createStaticFetcher('cached value')
     })
+
+    await sleep(10)
+    state.dispose()
+    let results: any[] = []
+    const fetcher = createStaticFetcher('api call value value')
+    state = mfetch(
+      'key',
+      ({ data, isValidating, error }) =>
+        results.push({ data, isValidating, error }),
+      { dedupOnInit: true, fetcher }
+    )
+
+    await sleep(10)
+    expect(fetcher).toHaveBeenCalledTimes(0)
+    expect(results).toMatchInlineSnapshot(`
+      Array [
+        Object {
+          "data": "cached value",
+          "error": undefined,
+          "isValidating": true,
+        },
+        Object {
+          "data": "cached value",
+          "error": undefined,
+          "isValidating": false,
+        },
+      ]
+    `)
   })
 
   it('api polling', async done => {
@@ -221,7 +201,7 @@ describe('mfetch tests', () => {
       r => {
         changes.push(r)
       },
-      { revalidateOnMount: false, fetcher }
+      { revalidateOnInit: false, fetcher }
     )
 
     await sleep(10)

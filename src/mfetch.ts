@@ -5,6 +5,7 @@ import {
   actionType,
   broadcastStateInterface,
   ConfigInterface,
+  fetcherFn,
   keyInterface,
   mutateInterface,
   responseInterface,
@@ -462,15 +463,19 @@ function mfetch<Data = any, Error = any>(
 
     // trigger a revalidation
     if (
-      config.revalidateOnMount ||
-      (!config.initialData && config.revalidateOnMount === undefined)
+      config.revalidateOnInit ||
+      (!config.initialData && config.revalidateOnInit === undefined)
     ) {
-      if (typeof latestKeyedData !== 'undefined') {
-        // delay revalidate if there's cache
-        // to not block the rendering
-        rIC(softRevalidate)
+      if (config.dedupOnInit === false) {
+        revalidate({ dedupe: false })
       } else {
-        softRevalidate()
+        if (typeof latestKeyedData !== 'undefined') {
+          // delay revalidate if there's cache
+          // to not block the rendering
+          rIC(softRevalidate)
+        } else {
+          softRevalidate()
+        }
       }
     }
 
@@ -676,8 +681,16 @@ function mfetch<Data = any, Error = any>(
 
 async function mFetchOne<Data = any>(
   key: keyInterface,
-  config: ConfigInterface<Data, Error> = {}
+  fetcher?: fetcherFn<Data>
 ): Promise<Data> {
+  const config: ConfigInterface = {
+    revalidateOnInit: true,
+    dedupOnInit: false,
+    dedupingInterval: undefined
+  }
+  if (fetcher) {
+    config.fetcher = fetcher
+  }
   return new Promise((resolve, reject) => {
     mfetch(
       key,
